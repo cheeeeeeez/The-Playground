@@ -1,0 +1,148 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class RunScript : MonoBehaviour
+{
+
+    [SerializeField] private Rigidbody2D rb;
+    [SerializeField] private BoxCollider2D bc;
+    [SerializeField] private LayerMask jumpableGround;
+    [SerializeField] private Animator animator;
+    [SerializeField] private float speed;
+    [SerializeField] private float jumpForce;
+    [SerializeField] private float jumpTime;
+    [SerializeField] private float coyoteTime;
+    [SerializeField] private float gravity;
+    private float internalCoyoteTime;
+    private float internalJumpTime;
+    private float internalSpeed;
+    private float horizontalDirection;
+    private bool jumped;
+    private bool grounded;
+    private bool jumping;
+
+    void Start() 
+    {
+        
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if(collision.gameObject.name == "ResetLine")
+        {
+            transform.position = new Vector2(-4.72f, 3.29f);
+        }
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        horizontalDirection = Input.GetAxisRaw("Horizontal");
+
+        if(horizontalDirection != 0)
+        {
+            animator.SetFloat("Moving", 1);
+        }
+        
+        else
+        {
+            animator.SetFloat("Moving", 0);
+        }
+
+        RaycastHit2D raycastHit = Physics2D.BoxCast(bc.bounds.center, bc.bounds.size - new Vector3(0.5f, 0, 0), 0, Vector2.down, 0.3f, jumpableGround);
+        if(raycastHit.collider != null)
+        {
+            internalJumpTime = jumpTime;
+            internalCoyoteTime = coyoteTime;
+            internalSpeed = speed;
+            grounded = true;
+            rb.gravityScale = gravity;
+            animator.SetBool("Grounded", true);
+        }
+        else
+        {
+            grounded = false;
+            animator.SetBool("Grounded", false);
+        }
+
+        if(Input.GetKeyDown(KeyCode.Space))
+        {
+            jumped = true;
+        }
+
+        if(Input.GetKeyUp(KeyCode.Space))
+        {
+            jumped = false;
+            internalJumpTime = 0;
+        }
+
+        if(grounded == false)
+        {
+            if(jumping == true)
+            {
+                animator.SetInteger("yMovement", 1);
+            }
+
+            else
+            {
+                animator.SetInteger("yMovement", -1);
+            }
+        }
+
+        else
+        {
+            animator.SetInteger("yMovement", 0);
+        }
+
+    }    
+
+    void FixedUpdate() 
+    {      
+        if(horizontalDirection < 0)
+        {
+            rb.AddForce(new Vector2(-internalSpeed * (Time.deltaTime * 100), 0));
+            transform.localScale = new Vector2(-1f, 1f);
+        }
+
+        else if(horizontalDirection > 0)
+        {
+            rb.AddForce(new Vector2(internalSpeed * (Time.deltaTime * 100), 0));
+            transform.localScale = new Vector2(1f, 1f);
+        }
+
+        if(jumping == true)
+        {
+            internalJumpTime = internalJumpTime - 1;
+        }
+
+        if(grounded == false)
+        {
+            internalCoyoteTime = internalCoyoteTime - 1;
+        }
+
+        if(jumped == true)
+        {
+            if(internalJumpTime > 0 && internalCoyoteTime > 0)
+            {
+                rb.gravityScale = gravity/100;
+                rb.AddForce(new Vector2(0, jumpForce * (Time.deltaTime * 100)), ForceMode2D.Impulse);
+                internalSpeed = speed - (speed/7);
+                jumped = false;
+                jumping = true;
+                internalCoyoteTime = 0;
+            }
+        }
+
+        if(internalJumpTime <= 0)
+        {
+            rb.gravityScale = gravity;
+            jumping = false;
+        }
+
+        if(grounded == false && jumping == false)
+        {
+            internalCoyoteTime = internalCoyoteTime - 1;
+        }
+    }
+}
